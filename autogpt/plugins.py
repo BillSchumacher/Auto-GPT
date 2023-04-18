@@ -336,13 +336,12 @@ def initialize_openai_plugins(manifests_specs: dict, cfg: Config, debug: bool = 
             os.chdir(openai_plugin_client_dir)
             Path('ai-plugin.json')
             if not os.path.exists('client'):
-                client_results = openapi_python_client.create_new_client(
+                if client_results := openapi_python_client.create_new_client(
                     url=manifest_spec['manifest']['api']['url'],
                     path=None,
                     meta=_meta_option,
                     config=_config,
-                )
-                if client_results:
+                ):
                     print(f"Error creating OpenAPI client: {client_results[0].header} \n"
                           f" details: {client_results[0].detail}")
                     continue
@@ -366,16 +365,16 @@ def instantiate_openai_plugin_clients(manifests_specs_clients: dict, cfg: Config
           plugins (dict): per url dictionary of BaseOpenAIPluginClient instances.
 
     """
-    plugins = {}
-    for url, manifest_spec_client in manifests_specs_clients.items():
-        plugins[url] = BaseOpenAIPluginClient(
+    return {
+        url: BaseOpenAIPluginClient(
             manifest=manifest_spec_client['manifest'],
             openapi_spec=manifest_spec_client['openapi_spec'],
             client=manifest_spec_client['client'],
             cfg=cfg,
-            debug=debug
+            debug=debug,
         )
-    return plugins
+        for url, manifest_spec_client in manifests_specs_clients.items()
+    }
 
 
 def scan_plugins(cfg: Config, debug: bool = False) -> List[Tuple[str, Path]]:
