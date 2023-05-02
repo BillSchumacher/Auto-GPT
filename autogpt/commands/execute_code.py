@@ -34,11 +34,7 @@ def execute_python_file(filename: str) -> str:
         result = subprocess.run(
             f"python {filename}", capture_output=True, encoding="utf8", shell=True
         )
-        if result.returncode == 0:
-            return result.stdout
-        else:
-            return f"Error: {result.stderr}"
-
+        return result.stdout if result.returncode == 0 else f"Error: {result.stderr}"
     try:
         client = docker.from_env()
         # You can replace this with the desired Python image/version

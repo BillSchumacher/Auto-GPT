@@ -146,8 +146,7 @@ def chat_with_ai(
                 remaining_budget = (
                     api_manager.get_total_budget() - api_manager.get_total_cost()
                 )
-                if remaining_budget < 0:
-                    remaining_budget = 0
+                remaining_budget = max(remaining_budget, 0)
                 system_message = (
                     f"Your remaining API budget is ${remaining_budget:.3f}"
                     + (
