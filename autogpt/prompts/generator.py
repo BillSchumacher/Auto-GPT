@@ -63,7 +63,7 @@ class PromptGenerator:
         if args is None:
             args = {}
 
-        command_args = {arg_key: arg_value for arg_key, arg_value in args.items()}
+        command_args = dict(args.items())
 
         command = {
             "label": command_label,
@@ -119,19 +119,18 @@ class PromptGenerator:
         Returns:
             str: The formatted numbered list.
         """
-        if item_type == "command":
-            command_strings = []
-            if self.command_registry:
-                command_strings += [
-                    str(item)
-                    for item in self.command_registry.commands.values()
-                    if item.enabled
-                ]
-            # terminate command is added manually
-            command_strings += [self._generate_command_string(item) for item in items]
-            return "\n".join(f"{item}" for i, item in enumerate(command_strings))
-        else:
-            return "\n".join(f"{item}" for i, item in enumerate(items))
+        if item_type != "command":
+            return "\n".join(f"{item}" for item in items)
+        command_strings = []
+        if self.command_registry:
+            command_strings += [
+                str(item)
+                for item in self.command_registry.commands.values()
+                if item.enabled
+            ]
+        # terminate command is added manually
+        command_strings += [self._generate_command_string(item) for item in items]
+        return "\n".join(f"{item}" for item in command_strings)
 
     def generate_prompt_string(self) -> str:
         """

@@ -89,7 +89,11 @@ class AgentManager(metaclass=Singleton):
             {"role": "user", "content": prompt},
         ]
         messages = self.handle_preinstruction(messages)
-        token_limit = self.cfg.fast_token_limit if not self.cfg.use_fastchat else self.cfg.fastchat_token_limit
+        token_limit = (
+            self.cfg.fastchat_token_limit
+            if self.cfg.use_fastchat
+            else self.cfg.fast_token_limit
+        )
         agent_reply = create_chat_completion(
             model=model,
             messages=messages,
@@ -116,7 +120,11 @@ class AgentManager(metaclass=Singleton):
         task, messages, model = self.agents[int(key)]
         messages.append({"role": "user", "content": message})
         messages = self.handle_preinstruction(messages)
-        token_limit = self.cfg.fast_token_limit if not self.cfg.use_fastchat else self.cfg.fastchat_token_limit
+        token_limit = (
+            self.cfg.fastchat_token_limit
+            if self.cfg.use_fastchat
+            else self.cfg.fast_token_limit
+        )
         agent_reply = create_chat_completion(
             model=model,
             messages=messages,
