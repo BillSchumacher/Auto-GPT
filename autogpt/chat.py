@@ -64,7 +64,8 @@ def chat_with_ai(
     if len(full_message_history) == 0:
         relevant_memory = ""
     else:
-        recent_history = full_message_history[-5:]
+        recent_history = [history.to_dict() for history in full_message_history[-5:]]
+        logger.debug(f"Recent history: {recent_history}")
         relevant_memories = permanent_memory.get_relevant(str(recent_history), 5)
         relevant_memory = str(relevant_memories)
 
