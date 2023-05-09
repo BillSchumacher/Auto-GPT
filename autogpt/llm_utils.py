@@ -1,70 +1,21 @@
 from __future__ import annotations
 
-import functools
-import time
 from typing import List, Optional
-import requests
+
 import openai
-from colorama import Fore, Style
-from openai.error import APIError, RateLimitError, Timeout
+import requests
+from colorama import Fore
+from tenacity import (
+    retry,
+    retry_if_not_exception_type,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 
 from autogpt.api_manager import ApiManager
 from autogpt.config import Config
 from autogpt.logs import logger
 from autogpt.types.openai import Message
-
-
-def retry_openai_api(
-    num_retries: int = 10,
-    backoff_base: float = 2.0,
-    warn_user: bool = True,
-):
-    """Retry an OpenAI API call.
-
-    Args:
-        num_retries int: Number of retries. Defaults to 10.
-        backoff_base float: Base for exponential backoff. Defaults to 2.
-        warn_user bool: Whether to warn the user. Defaults to True.
-    """
-    retry_limit_msg = f"{Fore.RED}Error: " f"Reached rate limit, passing...{Fore.RESET}"
-    api_key_error_msg = (
-        f"Please double check that you have setup a "
-        f"{Fore.CYAN + Style.BRIGHT}PAID{Style.RESET_ALL} OpenAI API Account. You can "
-        f"read more here: {Fore.CYAN}https://github.com/Significant-Gravitas/Auto-GPT#openai-api-keys-configuration{Fore.RESET}"
-    )
-    backoff_msg = (
-        f"{Fore.RED}Error: API Bad gateway. Waiting {{backoff}} seconds...{Fore.RESET}"
-    )
-
-    def _wrapper(func):
-        @functools.wraps(func)
-        def _wrapped(*args, **kwargs):
-            user_warned = not warn_user
-            num_attempts = num_retries + 1  # +1 for the first attempt
-            for attempt in range(1, num_attempts + 1):
-                try:
-                    return func(*args, **kwargs)
-
-                except RateLimitError:
-                    if attempt == num_attempts:
-                        raise
-
-                    logger.debug(retry_limit_msg)
-                    if not user_warned:
-                        logger.double_check(api_key_error_msg)
-                        user_warned = True
-
-                except APIError as e:
-                    if (e.http_status != 502) or (attempt == num_attempts):
-                        raise
-
-                backoff = backoff_base ** (attempt + 2)
-                logger.debug(backoff_msg.format(backoff=backoff))
-                time.sleep(backoff)
-
-        return _wrapped
-
-    return _wrapper
 
 
 def call_ai_function(
@@ -91,20 +42,37 @@ def call_ai_function(
     args = [str(arg) if arg is not None else "None" for arg in args]
     # parse args to comma separated string
     args: str = ", ".join(args)
-    messages: List[Message] = [
-        {
-            "role": "system",
-            "content": f"You are now the following python function: ```# {description}"
+    messages: list[Message] = [
+        Message(
+            "system",
+            f"You are now the following python function: ```# {description}"
             f"\n{function}```\n\nOnly respond with your `return` value.",
-        },
-        {"role": "user", "content": args},
+        ),
+        Message("user", args),
     ]
 
     return create_chat_completion(model=model, messages=messages, temperature=0)
 
 
-# Overly simple abstraction until we create something better
-# simple retry mechanism when getting a rate error or a bad gateway
+def handle_chat_completion(cfg, messages, model, temperature, max_tokens) -> str | None:
+    for plugin in cfg.plugins:
+        if not plugin.can_handle_chat_completion(
+            messages=messages,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        ):
+            continue
+        message = plugin.handle_chat_completion(
+            messages=messages,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        if message is not None:
+            return message
+
+
 def create_chat_completion(
     messages: List[Message],  # type: ignore
     model: Optional[str] = None,
@@ -127,77 +95,38 @@ def create_chat_completion(
     if temperature is None:
         temperature = cfg.temperature
 
-    num_retries = 10
-    warned_user = False
     if cfg.debug_mode:
         print(
             f"{Fore.GREEN}Creating chat completion with model {model}, temperature {temperature}, max_tokens {max_tokens}{Fore.RESET}"
         )
-    for plugin in cfg.plugins:
-        if plugin.can_handle_chat_completion(
-            messages=messages,
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        ):
-            message = plugin.handle_chat_completion(
-                messages=messages,
-                model=model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-            if message is not None:
-                return message
+    message = handle_chat_completion(cfg, messages, model, temperature, max_tokens)
+    if message:
+        return message
     api_manager = ApiManager()
     response = None
-    for attempt in range(num_retries):
-        backoff = 2 ** (attempt + 2)
-        try:
-            if cfg.use_azure:
-                response = api_manager.create_chat_completion(
-                    deployment_id=cfg.get_azure_deployment_id_for_model(model),
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
-            elif use_fastchat:
-                response = fastchat_chat_completion(
-                    model=cfg.fastchat_model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens or cfg.fastchat_token_limit,
-                )
-            else:
-                response = api_manager.create_chat_completion(
-                    model=model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
-            break
-        except RateLimitError:
-            if cfg.debug_mode:
-                print(
-                    f"{Fore.RED}Error: ", f"Reached rate limit, passing...{Fore.RESET}"
-                )
-            if not warned_user:
-                logger.double_check(
-                    f"Please double check that you have setup a {Fore.CYAN + Style.BRIGHT}PAID{Style.RESET_ALL} OpenAI API Account. "
-                    + f"You can read more here: {Fore.CYAN}https://github.com/Significant-Gravitas/Auto-GPT#openai-api-keys-configuration{Fore.RESET}"
-                )
-                warned_user = True
-        except (APIError, Timeout) as e:
-            if e.http_status != 502:
-                raise
-            if attempt == num_retries - 1:
-                raise
-        if cfg.debug_mode:
-            print(
-                f"{Fore.RED}Error: ",
-                f"API Bad gateway. Waiting {backoff} seconds...{Fore.RESET}",
-            )
-        time.sleep(backoff)
+    llm_messages = [message.to_dict() for message in messages]
+    if cfg.use_azure:
+        response = api_manager.create_chat_completion(
+            deployment_id=cfg.get_azure_deployment_id_for_model(model),
+            model=model,
+            messages=llm_messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+    elif use_fastchat:
+        response = fastchat_chat_completion(
+            model=cfg.fastchat_model,
+            messages=llm_messages,
+            temperature=temperature,
+            max_tokens=max_tokens or cfg.fastchat_token_limit,
+        )
+    else:
+        response = api_manager.create_chat_completion(
+            model=model,
+            messages=llm_messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
     if response is None:
         logger.typewriter_log(
             "FAILED TO GET RESPONSE FROM OPENAI",
@@ -206,10 +135,6 @@ def create_chat_completion(
             + f"Try running Auto-GPT again, and if the problem the persists try running it with `{Fore.CYAN}--debug{Fore.RESET}`.",
         )
         logger.double_check()
-        if cfg.debug_mode:
-            raise RuntimeError(f"Failed to get response after {num_retries} retries")
-        else:
-            quit(1)
     if isinstance(response, dict):
         return response["choices"][0]["message"]["content"]
     resp = response.choices[0].message["content"]
@@ -248,7 +173,11 @@ def get_ada_embedding(text: str) -> List[float]:
     return embedding["data"][0]["embedding"]
 
 
-@retry_openai_api()
+@retry(
+    wait=wait_random_exponential(min=1, max=20),
+    stop=stop_after_attempt(10),
+    retry=retry_if_not_exception_type(openai.InvalidRequestError),
+)
 def create_embedding(
     text: str,
     *_,
@@ -270,6 +199,11 @@ def create_embedding(
         **kwargs,
     )
 
+
+@retry(
+    wait=wait_random_exponential(min=1, max=20),
+    stop=stop_after_attempt(10),
+)
 def fastchat_chat_completion(
     model,
     messages,

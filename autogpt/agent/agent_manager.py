@@ -1,12 +1,10 @@
 """Agent manager for managing GPT agents"""
 from __future__ import annotations
 
-from typing import List
-
 from autogpt.config.config import Config
 from autogpt.llm_utils import create_chat_completion
 from autogpt.singleton import Singleton
-from autogpt.types.openai import Message
+from autogpt.types.openai import Message, ensure_messages
 
 
 class AgentManager(metaclass=Singleton):
@@ -20,7 +18,7 @@ class AgentManager(metaclass=Singleton):
     # Create new GPT agent
     # TODO: Centralise use of create_chat_completion() to globally enforce token limit
 
-    def handle_preinstruction(self, messages: List[Message]) -> List[Message]:
+    def handle_preinstruction(self, messages: list[Message]) -> list[Message]:
         """Handle pre-instruction plugins
 
         Args:
@@ -34,7 +32,7 @@ class AgentManager(metaclass=Singleton):
                 continue
             if plugin_messages := plugin.pre_instruction(messages):
                 messages.extend(iter(plugin_messages))
-        return messages
+        return ensure_messages(messages)
 
     def handle_postinstruction(self, agent_reply) -> str:
         """Handle post-instruction plugins
@@ -52,7 +50,7 @@ class AgentManager(metaclass=Singleton):
             agent_reply = plugin.post_instruction(agent_reply)
         return agent_reply
 
-    def handle_oninstruction(self, messages: List[Message]) -> List[Message]:
+    def handle_oninstruction(self, messages: list[Message]) -> list[Message]:
         """Handle on-instruction plugins
 
         Args:
@@ -70,7 +68,7 @@ class AgentManager(metaclass=Singleton):
                 plugins_reply = f"{plugins_reply}{sep}{plugin_result}"
 
         if plugins_reply and plugins_reply != "":
-            messages.append({"role": "assistant", "content": plugins_reply})
+            messages.append(Message("assistant", plugins_reply))
         return messages
 
     def create_agent(self, task: str, prompt: str, model: str) -> tuple[int, str]:
@@ -84,19 +82,27 @@ class AgentManager(metaclass=Singleton):
         Returns:
             The key of the new agent
         """
-        messages: List[Message] = [
-            {"role": "system", "content": "You are an autonomous AI agent. You can ask me to do things. I will try my best to do them."},
-            {"role": "user", "content": prompt},
+        messages: list[Message] = [
+            Message(
+                "system",
+                "You are an autonomous AI agent. You can ask me to do things."
+                " I will try my best to do them.",
+            ),
+            Message("user", prompt),
         ]
         messages = self.handle_preinstruction(messages)
-        token_limit = self.cfg.fast_token_limit if not self.cfg.use_fastchat else self.cfg.fastchat_token_limit
+        token_limit = (
+            self.cfg.fast_token_limit
+            if not self.cfg.use_fastchat
+            else self.cfg.fastchat_token_limit
+        )
         agent_reply = create_chat_completion(
             model=model,
             messages=messages,
             max_tokens=token_limit,
             use_fastchat=self.cfg.use_fastchat,
         )
-        messages.append({"role": "assistant", "content": agent_reply})
+        messages.append(Message("assistant", agent_reply))
         messages = self.handle_oninstruction(messages)
         key = self.next_key
         self.next_key += 1
@@ -114,16 +120,21 @@ class AgentManager(metaclass=Singleton):
             The agent's response
         """
         task, messages, model = self.agents[int(key)]
-        messages.append({"role": "user", "content": message})
+        messages.append(Message("user", message))
         messages = self.handle_preinstruction(messages)
-        token_limit = self.cfg.fast_token_limit if not self.cfg.use_fastchat else self.cfg.fastchat_token_limit
+
+        token_limit = (
+            self.cfg.fast_token_limit
+            if not self.cfg.use_fastchat
+            else self.cfg.fastchat_token_limit
+        )
         agent_reply = create_chat_completion(
             model=model,
             messages=messages,
             max_tokens=token_limit,
             use_fastchat=self.cfg.use_fastchat,
         )
-        messages.append({"role": "assistant", "content": agent_reply})
+        messages.append(Message("assistant", agent_reply))
         messages = self.handle_oninstruction(messages)
         return self.handle_postinstruction(agent_reply)
 

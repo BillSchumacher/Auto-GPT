@@ -34,9 +34,7 @@ def build_default_prompt_generator() -> PromptGenerator:
         prompt_generator.add_command(command_label, command_name, args)
 
     # Add resources to the PromptGenerator object
-    prompt_generator.add_resource(
-        "Internet access for gathering information."
-    )
+    prompt_generator.add_resource("Internet access for gathering information.")
     prompt_generator.add_resource(
         "Agents for delegation of simple tasks and collaboration."
     )
@@ -46,9 +44,7 @@ def build_default_prompt_generator() -> PromptGenerator:
     prompt_generator.add_performance_evaluation(
         "Reflect on past decisions and strategies to refine your approach."
     )
-    prompt_generator.add_performance_evaluation(
-        "Avoid repeating similar actions."
-    )
+    prompt_generator.add_performance_evaluation("Avoid repeating similar actions.")
     prompt_generator.add_performance_evaluation(
         "If you cannot think of a valid command to perform start or message an agent to determine the next command."
     )

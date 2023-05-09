@@ -3,7 +3,8 @@ import time
 import unittest
 from unittest.mock import patch
 
-from autogpt.chat import create_chat_message, generate_context
+from autogpt.chat import generate_context
+from autogpt.types.openai import Message
 
 
 class TestChat(unittest.TestCase):
@@ -11,12 +12,12 @@ class TestChat(unittest.TestCase):
 
     def test_happy_path_role_content(self):
         """Test that the function returns a dictionary with the correct keys and values when valid strings are provided for role and content."""
-        result = create_chat_message("system", "Hello, world!")
+        result = Message("system", "Hello, world!")
         self.assertEqual(result, {"role": "system", "content": "Hello, world!"})
 
     def test_empty_role_content(self):
         """Test that the function returns a dictionary with the correct keys and values when empty strings are provided for role and content."""
-        result = create_chat_message("", "")
+        result = Message("", "")
         self.assertEqual(result, {"role": "", "content": ""})
 
     @patch("time.strftime")
@@ -58,14 +59,13 @@ class TestChat(unittest.TestCase):
         prompt = "What is your favorite color?"
         relevant_memory = "You once painted your room blue."
         full_message_history = [
-            create_chat_message("user", "Hi there!"),
-            create_chat_message("assistant", "Hello! How can I assist you today?"),
-            create_chat_message("user", "Can you tell me a joke?"),
-            create_chat_message(
-                "assistant",
+            Message("user", "Hi there!"),
+            Message("assistant", "Hello! How can I assist you today?"),
+            Message("user", "Can you tell me a joke?"),
+            Message("assistant",
                 "Why did the tomato turn red? Because it saw the salad dressing!",
             ),
-            create_chat_message("user", "Haha, that's funny."),
+            Message("user", "Haha, that's funny."),
         ]
         model = "gpt-3.5-turbo-0301"
 
