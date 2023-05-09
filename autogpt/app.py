@@ -82,10 +82,14 @@ def map_command_synonyms(command_name: str):
         ("create_file", "write_to_file"),
         ("search", "google"),
     ]
-    for seen_command, actual_command_name in synonyms:
-        if command_name == seen_command:
-            return actual_command_name
-    return command_name
+    return next(
+        (
+            actual_command_name
+            for seen_command, actual_command_name in synonyms
+            if command_name == seen_command
+        ),
+        command_name,
+    )
 
 
 def execute_command(
@@ -104,10 +108,7 @@ def execute_command(
         str: The result of the command
     """
     try:
-        cmd = command_registry.commands.get(command_name)
-
-        # If the command is found, call it with the provided arguments
-        if cmd:
+        if cmd := command_registry.commands.get(command_name):
             return cmd(**arguments)
 
         # TODO: Remove commands below after they are moved to the command registry.
@@ -116,22 +117,17 @@ def execute_command(
         if command_name == "memory_add":
             return get_memory(CFG).add(arguments["string"])
 
-        # TODO: Change these to take in a file rather than pasted code, if
-        # non-file is given, return instructions "Input should be a python
-        # filepath, write your code to file and try again
         elif command_name == "task_complete":
             shutdown()
         else:
-            for command in prompt.commands:
-                if (
-                    command_name == command["label"].lower()
-                    or command_name == command["name"].lower()
-                ):
-                    return command["function"](**arguments)
-            return (
-                f"Unknown command '{command_name}'. Please refer to the 'COMMANDS'"
-                " list for available commands and only respond in the specified JSON"
-                " format."
+            return next(
+                (
+                    command["function"](**arguments)
+                    for command in prompt.commands
+                    if command_name
+                    in [command["label"].lower(), command["name"].lower()]
+                ),
+                f"Unknown command '{command_name}'. Please refer to the 'COMMANDS' list for available commands and only respond in the specified JSON format.",
             )
     except Exception as e:
         return f"Error: {str(e)}"
@@ -197,10 +193,10 @@ def start_agent(name: str, task: str, prompt: str, model=CFG.fast_llm_model) -> 
     voice_name = name.replace("_", " ")
 
     first_message = f"""You are {name}.  Respond with: "Acknowledged"."""
-    agent_intro = f"{voice_name} here, Reporting for duty!"
-
     # Create agent
     if CFG.speak_mode:
+        agent_intro = f"{voice_name} here, Reporting for duty!"
+
         say_text(agent_intro, 1)
     key, ack = AGENT_MANAGER.create_agent(task, first_message, model)
 
@@ -244,7 +240,7 @@ def list_agents() -> str:
         str: A list of all agents, ids (numbers)
     """
     return "List of agents:\n" + "\n".join(
-        [str(x[0]) + ": " + x[1] for x in AGENT_MANAGER.list_agents()]
+        [f"{str(x[0])}: {x[1]}" for x in AGENT_MANAGER.list_agents()]
     )
 
 

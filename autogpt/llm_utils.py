@@ -99,8 +99,9 @@ def create_chat_completion(
         print(
             f"{Fore.GREEN}Creating chat completion with model {model}, temperature {temperature}, max_tokens {max_tokens}{Fore.RESET}"
         )
-    message = handle_chat_completion(cfg, messages, model, temperature, max_tokens)
-    if message:
+    if message := handle_chat_completion(
+        cfg, messages, model, temperature, max_tokens
+    ):
         return message
     api_manager = ApiManager()
     response = None
@@ -131,8 +132,7 @@ def create_chat_completion(
         logger.typewriter_log(
             "FAILED TO GET RESPONSE FROM OPENAI",
             Fore.RED,
-            "Auto-GPT has failed to get a response from OpenAI's services. "
-            + f"Try running Auto-GPT again, and if the problem the persists try running it with `{Fore.CYAN}--debug{Fore.RESET}`.",
+            f"Auto-GPT has failed to get a response from OpenAI's services. Try running Auto-GPT again, and if the problem the persists try running it with `{Fore.CYAN}--debug{Fore.RESET}`.",
         )
         logger.double_check()
     if isinstance(response, dict):

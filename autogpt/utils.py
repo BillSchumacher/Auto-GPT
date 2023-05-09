@@ -59,8 +59,7 @@ def clean_input(prompt: str = "", talk=False):
 
         # ask for input, default when just pressing Enter is y
         print("Asking user via keyboard...")
-        answer = input(prompt)
-        return answer
+        return input(prompt)
     except KeyboardInterrupt:
         print("You interrupted Auto-GPT")
         print("Quitting...")
@@ -118,10 +117,10 @@ def get_current_git_branch() -> str:
 
 
 def get_latest_bulletin() -> str:
-    exists = os.path.exists("CURRENT_BULLETIN.md")
-    current_bulletin = ""
-    if exists:
+    if exists := os.path.exists("CURRENT_BULLETIN.md"):
         current_bulletin = open("CURRENT_BULLETIN.md", "r", encoding="utf-8").read()
+    else:
+        current_bulletin = ""
     new_bulletin = get_bulletin_from_web()
     is_new_news = new_bulletin != current_bulletin
 

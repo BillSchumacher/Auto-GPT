@@ -154,7 +154,7 @@ class Agent:
     def get_console_input(self, cfg) -> str:
         if cfg.chat_messages_enabled:
             return clean_input("Waiting for your response...")
-        return clean_input(Fore.MAGENTA + "Input:" + Style.RESET_ALL)
+        return clean_input(f"{Fore.MAGENTA}Input:{Style.RESET_ALL}")
 
     def process_self_feedback(self, assistant_reply_json, cfg):
         logger.typewriter_log(

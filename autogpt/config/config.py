@@ -137,8 +137,7 @@ class Config(metaclass=Singleton):
         self.plugins: List[AutoGPTPluginTemplate] = []
         self.plugins_openai = []
 
-        plugins_allowlist = os.getenv("ALLOWLISTED_PLUGINS")
-        if plugins_allowlist:
+        if plugins_allowlist := os.getenv("ALLOWLISTED_PLUGINS"):
             self.plugins_allowlist = plugins_allowlist.split(",")
         else:
             self.plugins_allowlist = []
