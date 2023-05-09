@@ -36,7 +36,7 @@ def build_default_prompt_generator() -> PromptGenerator:
     # Add resources to the PromptGenerator object
     prompt_generator.add_resource("Internet access for gathering information.")
     prompt_generator.add_resource(
-        "Agents for delegation of simple tasks and collaboration."
+        "Agents for delegation of simple tasks and collaboration. Agents are assigned a numerical ID after creation."
     )
     prompt_generator.add_resource("File I/O for reading and writing files.")
 

@@ -341,9 +341,7 @@ class Agent:
             self.full_message_history.append(Message("system", result))
             logger.typewriter_log("SYSTEM: ", Fore.YELLOW, result)
             return
-        self.full_message_history.append(
-            Message("system", "Unable to execute command")
-        )
+        self.full_message_history.append(Message("system", "Unable to execute command"))
         logger.typewriter_log("SYSTEM: ", Fore.YELLOW, "Unable to execute command")
 
     def _resolve_pathlike_command_args(self, command_args):

@@ -62,7 +62,8 @@ class TestChat(unittest.TestCase):
             Message("user", "Hi there!"),
             Message("assistant", "Hello! How can I assist you today?"),
             Message("user", "Can you tell me a joke?"),
-            Message("assistant",
+            Message(
+                "assistant",
                 "Why did the tomato turn red? Because it saw the salad dressing!",
             ),
             Message("user", "Haha, that's funny."),

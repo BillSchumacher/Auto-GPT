@@ -34,9 +34,7 @@ def ensure_messages(messages: list[Message | dict]) -> list[Message]:
     message_objs = []
     for message in messages:
         if not isinstance(message, Message):
-            message_objs.append(
-                Message(message["role"], message["content"])
-            )
+            message_objs.append(Message(message["role"], message["content"]))
         else:
             message_objs.append(message)
     return message_objs

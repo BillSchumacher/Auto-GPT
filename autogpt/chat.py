@@ -1,6 +1,5 @@
+import platform
 import time
-from datetime import datetime
-from uuid import uuid4
 
 from autogpt import token_counter
 from autogpt.api_manager import ApiManager
@@ -12,12 +11,12 @@ from autogpt.types.openai import Message
 cfg = Config()
 
 
-
 def generate_context(prompt, relevant_memory, full_message_history, model):
     current_context = [
         Message("system", prompt),
         Message(
-            "system", f"The current time and date is {time.strftime('%c')}"
+            "system",
+            f"Your operating system is: {platform.system()} {platform.release()}. The current time and date is {time.strftime('%c')}",
         ),
         Message(
             "system",
