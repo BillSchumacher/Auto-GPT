@@ -213,9 +213,17 @@ def start_agent(name: str, task: str, prompt: str, model=CFG.fast_llm_model) -> 
     return f"Agent {name} created with key {key}. First response: {agent_response}"
 
 
-@command("message_agent", "Message GPT Agent", '"key": "<key>", "message": "<message>"')
+@command("message_agent", "Message GPT Agent", '"key": "<int>", "message": "<message>"')
 def message_agent(key: str, message: str) -> str:
-    """Message an agent with a given key and message"""
+    """Message an agent with a given key and message
+
+    Args:
+        key (str): The key of the agent, should be a number
+        message (str): The message to send to the agent
+
+    Returns:
+        str: The response of the agent
+    """
     # Check if the key is a valid integer
     if is_valid_int(key):
         agent_response = AGENT_MANAGER.message_agent(int(key), message)
@@ -233,7 +241,7 @@ def list_agents() -> str:
     """List all agents
 
     Returns:
-        str: A list of all agents
+        str: A list of all agents, ids (numbers)
     """
     return "List of agents:\n" + "\n".join(
         [str(x[0]) + ": " + x[1] for x in AGENT_MANAGER.list_agents()]

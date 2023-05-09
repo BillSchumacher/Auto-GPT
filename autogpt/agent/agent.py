@@ -3,7 +3,7 @@ from typing import Any, Dict, NoReturn, Tuple, Union
 from colorama import Fore, Style
 
 from autogpt.app import execute_command, get_command
-from autogpt.chat import chat_with_ai, create_chat_message
+from autogpt.chat import chat_with_ai
 from autogpt.config import Config
 from autogpt.json_utils.json_fix_llm import fix_json_using_multiple_techniques
 from autogpt.json_utils.utilities import validate_json
@@ -11,6 +11,7 @@ from autogpt.llm_utils import create_chat_completion
 from autogpt.logs import logger, print_assistant_thoughts
 from autogpt.speech import say_text
 from autogpt.spinner import Spinner
+from autogpt.types.openai import Message
 from autogpt.utils import clean_input, send_chat_message_to_user
 from autogpt.workspace import Workspace
 
@@ -337,12 +338,10 @@ class Agent:
 
     def update_history(self, result):
         if result is not None:
-            self.full_message_history.append(create_chat_message("system", result))
+            self.full_message_history.append(Message("system", result))
             logger.typewriter_log("SYSTEM: ", Fore.YELLOW, result)
             return
-        self.full_message_history.append(
-            create_chat_message("system", "Unable to execute command")
-        )
+        self.full_message_history.append(Message("system", "Unable to execute command"))
         logger.typewriter_log("SYSTEM: ", Fore.YELLOW, "Unable to execute command")
 
     def _resolve_pathlike_command_args(self, command_args):
@@ -383,8 +382,8 @@ class Agent:
         plan = thoughts.get("plan", "")
         thought = thoughts.get("thoughts", "")
         criticism = thoughts.get("criticism", "")
-        feedback_thoughts = thought + reasoning + plan + criticism
+        feedback_thoughts = f"{thought} {reasoning} {plan} {criticism}"
         return create_chat_completion(
-            [{"role": "user", "content": feedback_prompt + feedback_thoughts}],
+            [Message("user", f"{feedback_prompt} {feedback_thoughts}")],
             llm_model,
         )

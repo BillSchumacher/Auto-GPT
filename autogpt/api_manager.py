@@ -1,6 +1,12 @@
 from __future__ import annotations
 
 import openai
+from tenacity import (
+    retry,
+    retry_if_not_exception_type,
+    stop_after_attempt,
+    wait_random_exponential,
+)
 
 from autogpt.config import Config
 from autogpt.logs import logger
@@ -21,6 +27,11 @@ class ApiManager(metaclass=Singleton):
         self.total_cost = 0
         self.total_budget = 0.0
 
+    @retry(
+        wait=wait_random_exponential(min=1, max=20),
+        stop=stop_after_attempt(10),
+        retry=retry_if_not_exception_type(openai.InvalidRequestError),
+    )
     def create_chat_completion(
         self,
         messages: list,  # type: ignore
@@ -31,13 +42,14 @@ class ApiManager(metaclass=Singleton):
     ) -> str:
         """
         Create a chat completion and update the cost.
+
         Args:
-        messages (list): The list of messages to send to the API.
-        model (str): The model to use for the API call.
-        temperature (float): The temperature to use for the API call.
-        max_tokens (int): The maximum number of tokens for the API call.
+            messages (list): The list of messages to send to the API.
+            model (str): The model to use for the API call.
+            temperature (float): The temperature to use for the API call.
+            max_tokens (int): The maximum number of tokens for the API call.
         Returns:
-        str: The AI's response.
+            str: The AI's response.
         """
         cfg = Config()
         if temperature is None:
@@ -70,9 +82,9 @@ class ApiManager(metaclass=Singleton):
         Update the total cost, prompt tokens, and completion tokens.
 
         Args:
-        prompt_tokens (int): The number of tokens used in the prompt.
-        completion_tokens (int): The number of tokens used in the completion.
-        model (str): The model used for the API call.
+            prompt_tokens (int): The number of tokens used in the prompt.
+            completion_tokens (int): The number of tokens used in the completion.
+            model (str): The model used for the API call.
         """
         self.total_prompt_tokens += prompt_tokens
         self.total_completion_tokens += completion_tokens
@@ -87,7 +99,7 @@ class ApiManager(metaclass=Singleton):
         Sets the total user-defined budget for API calls.
 
         Args:
-        total_budget (float): The total budget for API calls.
+            total_budget (float): The total budget for API calls.
         """
         self.total_budget = total_budget
 
@@ -96,7 +108,7 @@ class ApiManager(metaclass=Singleton):
         Get the total number of prompt tokens.
 
         Returns:
-        int: The total number of prompt tokens.
+            int: The total number of prompt tokens.
         """
         return self.total_prompt_tokens
 
@@ -105,7 +117,7 @@ class ApiManager(metaclass=Singleton):
         Get the total number of completion tokens.
 
         Returns:
-        int: The total number of completion tokens.
+            int: The total number of completion tokens.
         """
         return self.total_completion_tokens
 
@@ -114,7 +126,7 @@ class ApiManager(metaclass=Singleton):
         Get the total cost of API calls.
 
         Returns:
-        float: The total cost of API calls.
+            float: The total cost of API calls.
         """
         return self.total_cost
 
@@ -123,6 +135,6 @@ class ApiManager(metaclass=Singleton):
         Get the total user-defined budget for API calls.
 
         Returns:
-        float: The total budget for API calls.
+            float: The total budget for API calls.
         """
         return self.total_budget

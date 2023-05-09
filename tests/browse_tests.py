@@ -1,12 +1,8 @@
-import os
-import sys
 import unittest
 
 from bs4 import BeautifulSoup
 
-sys.path.append(os.path.abspath("../scripts"))
-
-from browse import extract_hyperlinks
+from autogpt.processing.html import extract_hyperlinks
 
 
 class TestBrowseLinks(unittest.TestCase):

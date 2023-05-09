@@ -37,16 +37,15 @@ class Workspace:
     def make_workspace(cls, workspace_directory: str | Path, *args, **kwargs) -> Path:
         """Create a workspace directory and return the path to it.
 
-        Parameters
-        ----------
-        workspace_directory
+        Args:
+            workspace_directory: The directory to create the workspace in.
+
+        Returns:
             The path to the workspace directory.
 
-        Returns
-        -------
-        Path
-            The path to the workspace directory.
-
+        Raises:
+            ValueError: If the workspace directory contains a null byte.
+            ValueError: If the workspace directory is absolute.
         """
         # TODO: have this make the env file and ai settings file in the directory.
         workspace_directory = cls._sanitize_path(workspace_directory)
@@ -56,16 +55,16 @@ class Workspace:
     def get_path(self, relative_path: str | Path) -> Path:
         """Get the full path for an item in the workspace.
 
-        Parameters
-        ----------
-        relative_path
-            The relative path to resolve in the workspace.
+        Args:
+            relative_path: The relative path to the item.
 
-        Returns
-        -------
-        Path
-            The resolved path relative to the workspace.
+        Returns:
+            The full path to the item.
 
+        Raises:
+            ValueError: If the path contains a null byte.
+            ValueError: If the path is absolute.
+            ValueError: If the path is outside of the workspace and restrict_to_workspace is True.
         """
         return self._sanitize_path(
             relative_path,
@@ -81,27 +80,18 @@ class Workspace:
     ) -> Path:
         """Resolve the relative path within the given root if possible.
 
-        Parameters
-        ----------
-        relative_path
-            The relative path to resolve.
-        root
-            The root path to resolve the relative path within.
-        restrict_to_root
-            Whether to restrict the path to the root.
+        Args:
+            relative_path: The relative path to resolve.
+            root: The root to resolve the path within.
+            restrict_to_root: Whether to restrict the resolved path to the root.
 
-        Returns
-        -------
-        Path
+        Returns:
             The resolved path.
 
-        Raises
-        ------
-        ValueError
-            If the path is absolute and a root is provided.
-        ValueError
-            If the path is outside the root and the root is restricted.
-
+        Raises:
+            ValueError: If the path contains a null byte.
+            ValueError: If the path is absolute.
+            ValueError: If the path is outside of the root and restrict_to_root is True.
         """
 
         # Posix systems disallow null bytes in paths. Windows is agnostic about it.
